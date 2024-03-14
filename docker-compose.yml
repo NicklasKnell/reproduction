@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  mikro-orm-reproduction-db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: mikro-orm-reproduction
+    ports:
+      - 5432:5432
+# Postgres connection string: postgres://admin:admin@localhost:5432/mikro-orm-reproduction

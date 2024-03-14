@@ -1,8 +1,7 @@
-import { Entity, MikroORM, PrimaryKey, Property } from '@mikro-orm/sqlite';
+import { Entity, MikroORM, PrimaryKey, Property } from "@mikro-orm/postgresql";
 
 @Entity()
 class User {
-
   @PrimaryKey()
   id!: number;
 
@@ -16,16 +15,19 @@ class User {
     this.name = name;
     this.email = email;
   }
-
 }
 
 let orm: MikroORM;
 
 beforeAll(async () => {
   orm = await MikroORM.init({
-    dbName: ':memory:',
+    dbName: "mikro-orm-reproduction",
+    host: "localhost",
+    port: 5432,
+    user: "admin",
+    password: "admin",
     entities: [User],
-    debug: ['query', 'query-params'],
+    debug: ["query", "query-params"],
     allowGlobalContext: true, // only for testing
   });
   await orm.schema.refreshDatabase();
@@ -35,17 +37,17 @@ afterAll(async () => {
   await orm.close(true);
 });
 
-test('basic CRUD example', async () => {
-  orm.em.create(User, { name: 'Foo', email: 'foo' });
+test("basic CRUD example", async () => {
+  orm.em.create(User, { name: "Foo", email: "foo" });
   await orm.em.flush();
   orm.em.clear();
 
-  const user = await orm.em.findOneOrFail(User, { email: 'foo' });
-  expect(user.name).toBe('Foo');
-  user.name = 'Bar';
+  const user = await orm.em.findOneOrFail(User, { email: "foo" });
+  expect(user.name).toBe("Foo");
+  user.name = "Bar";
   orm.em.remove(user);
   await orm.em.flush();
 
-  const count = await orm.em.count(User, { email: 'foo' });
+  const count = await orm.em.count(User, { email: "foo" });
   expect(count).toBe(0);
 });
