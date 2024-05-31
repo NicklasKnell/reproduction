@@ -49,10 +49,10 @@ abstract class PolyEmailDataWrapper {
 
 @Embeddable()
 class DueDateEmailDataWrapper extends PolyEmailDataWrapper {
-  @Embedded({ array: true })
-  sentEmails: DueDateEmailData[];
+  @Embedded({ object: true })
+  sentEmails: DueDateEmailData;
 
-  constructor(args: { sentEmails: DueDateEmailData[] }) {
+  constructor(args: { sentEmails: DueDateEmailData }) {
     super(WrapperType.DUE_DATE);
     this.sentEmails = args.sentEmails;
   }
@@ -60,10 +60,10 @@ class DueDateEmailDataWrapper extends PolyEmailDataWrapper {
 
 @Embeddable()
 class EmailDataWrapper extends PolyEmailDataWrapper {
-  @Embedded({ array: true })
-  sentEmails: EmailData[];
+  @Embedded({ object: true })
+  sentEmails: EmailData;
 
-  constructor(args: { sentEmails: EmailData[] }) {
+  constructor(args: { sentEmails: EmailData }) {
     super(WrapperType.EMAIL);
     this.sentEmails = args.sentEmails;
   }
@@ -114,12 +114,10 @@ test("embedded", async () => {
   const user = new User(
     0,
     new DueDateEmailDataWrapper({
-      sentEmails: [
-        new DueDateEmailData({
-          dueDate: new Date(),
-          senderEmail: "foo",
-        }),
-      ],
+      sentEmails: new DueDateEmailData({
+        dueDate: new Date(),
+        senderEmail: "foo",
+      }),
     })
   );
   await orm.em.persistAndFlush(user);
@@ -127,7 +125,7 @@ test("embedded", async () => {
 
   const userQuery = await orm.em.findOneOrFail(User, { id: 0 });
 
-  const dueDate = (userQuery.email as DueDateEmailDataWrapper).sentEmails[0]
+  const dueDate = (userQuery.email as DueDateEmailDataWrapper).sentEmails
     .dueDate;
   console.log(dueDate);
   expect(dueDate).toBeDefined();
