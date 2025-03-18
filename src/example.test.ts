@@ -16,34 +16,22 @@ enum ChangeType {
   STRING = "STRING",
 }
 
-@Embeddable({ abstract: true, discriminatorColumn: "type" })
-abstract class AbstractChangeEntry {
-  @Enum()
-  type: ChangeType;
-
-  constructor(type: ChangeType) {
-    this.type = type;
-  }
-}
-
 @Embeddable()
-export class BooleanChangeEntry extends AbstractChangeEntry {
+export class BooleanChangeEntry {
   @Property()
   value: boolean | null;
 
   constructor({ value }: { value: boolean | null }) {
-    super(ChangeType.BOOLEAN);
     this.value = value;
   }
 }
 
 @Embeddable()
-export class StringChangeEntry extends AbstractChangeEntry {
+export class StringChangeEntry {
   @Property()
   value: string | null;
 
   constructor({ value }: { value: string | null }) {
-    super(ChangeType.STRING);
     this.value = value;
   }
 }
@@ -63,7 +51,7 @@ class ChangeBooleanValue extends AbstractChangeType {
   @Embedded({ object: true, array: true })
   entries: BooleanChangeEntry[];
 
-  constructor({ entries }: { entries: Omit<BooleanChangeEntry, "type">[] }) {
+  constructor({ entries }: { entries: BooleanChangeEntry[] }) {
     super(ChangeType.BOOLEAN);
     this.entries = entries.map((entry) => new BooleanChangeEntry(entry));
   }
@@ -74,7 +62,7 @@ class ChangeStringValue extends AbstractChangeType {
   @Embedded({ object: true, array: true })
   entries: StringChangeEntry[];
 
-  constructor({ entries }: { entries: Omit<StringChangeEntry, "type">[] }) {
+  constructor({ entries }: { entries: StringChangeEntry[] }) {
     super(ChangeType.STRING);
     this.entries = entries.map((entry) => new StringChangeEntry(entry));
   }
@@ -130,14 +118,4 @@ test("basic CRUD example", async () => {
 
   orm.em.create(ChangeOwner, changeOwner);
   await orm.em.flush();
-  orm.em.clear();
-
-  const persistedChangeOwner = await orm.em.findOne(ChangeOwner, 1);
-  const conn = orm.em.getConnection() as AbstractSqlConnection;
-  const knex = conn.getKnex();
-
-  const res = await knex.select("*").from("change_owner").where({ id: 1 });
-
-  console.dir(persistedChangeOwner, { depth: null });
-  console.dir(res, { depth: null });
 });
