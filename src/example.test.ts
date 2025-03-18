@@ -132,12 +132,15 @@ test("basic CRUD example", async () => {
   await orm.em.flush();
   orm.em.clear();
 
-  const persistedChangeOwner = await orm.em.findOne(ChangeOwner, 1);
+  const persistedChangeOwner = await orm.em.findOneOrFail(ChangeOwner, 1);
   const conn = orm.em.getConnection() as AbstractSqlConnection;
   const knex = conn.getKnex();
 
   const res = await knex.select("*").from("change_owner").where({ id: 1 });
 
-  console.dir(persistedChangeOwner, { depth: null });
+  expect(persistedChangeOwner).toEqual(res[0]);
+  console.dir(persistedChangeOwner, {
+    depth: null,
+  });
   console.dir(res, { depth: null });
 });
