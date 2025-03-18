@@ -1,4 +1,5 @@
 import {
+  AbstractSqlConnection,
   Embeddable,
   Embedded,
   Entity,
@@ -132,5 +133,11 @@ test("basic CRUD example", async () => {
   orm.em.clear();
 
   const persistedChangeOwner = await orm.em.findOne(ChangeOwner, 1);
-  console.log(persistedChangeOwner);
+  const conn = orm.em.getConnection() as AbstractSqlConnection;
+  const knex = conn.getKnex();
+
+  const res = await knex.select("*").from("change_owner").where({ id: 1 });
+
+  console.dir(persistedChangeOwner, { depth: null });
+  console.dir(res, { depth: null });
 });
