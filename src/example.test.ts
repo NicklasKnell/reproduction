@@ -1,19 +1,65 @@
-import { Entity, MikroORM, PrimaryKey, Property } from "@mikro-orm/postgresql";
+import {
+  Collection,
+  Embeddable,
+  Embedded,
+  Entity,
+  ManyToOne,
+  MikroORM,
+  OneToMany,
+  PrimaryKey,
+  Property,
+} from "@mikro-orm/postgresql";
+import { TsMorphMetadataProvider } from "@mikro-orm/reflection";
+
+@Embeddable()
+class StudentInfo {
+  @Property()
+  firstName: string;
+
+  @Property()
+  lastName: string;
+
+  constructor(firstName: string, lastName: string) {
+    this.firstName = firstName;
+    this.lastName = lastName;
+  }
+}
 
 @Entity()
-class User {
+class Course {
   @PrimaryKey()
-  id!: number;
+  id: number;
 
   @Property()
   name: string;
 
-  @Property({ unique: true })
-  email: string;
+  @OneToMany({ mappedBy: "course" })
+  students = new Collection<Student>(this);
 
-  constructor(name: string, email: string) {
+  constructor(id: number, name: string) {
+    this.id = id;
     this.name = name;
-    this.email = email;
+  }
+}
+
+@Entity()
+class Student {
+  @PrimaryKey()
+  id: number;
+
+  @Property()
+  name: string;
+
+  @ManyToOne()
+  course: Course;
+
+  @Embedded({ object: true, nullable: true })
+  info: StudentInfo | null = null;
+
+  constructor(id: number, name: string, course: Course) {
+    this.id = id;
+    this.name = name;
+    this.course = course;
   }
 }
 
@@ -26,7 +72,8 @@ beforeAll(async () => {
     port: 5432,
     user: "admin",
     password: "admin",
-    entities: [User],
+    entities: [StudentInfo, Student, Course],
+    metadataProvider: TsMorphMetadataProvider,
     debug: ["query", "query-params"],
     allowGlobalContext: true, // only for testing
   });
@@ -38,16 +85,20 @@ afterAll(async () => {
 });
 
 test("basic CRUD example", async () => {
-  orm.em.create(User, { name: "Foo", email: "foo" });
+  const course1 = new Course(1, "Math");
+  const newStudent1 = new Student(1, "Foo", course1);
+  const newStudent2 = new Student(2, "Bar", course1);
+  newStudent2.info = new StudentInfo("John", "Doe");
+  orm.em.persist(newStudent1);
+  orm.em.persist(newStudent2);
   await orm.em.flush();
   orm.em.clear();
 
-  const user = await orm.em.findOneOrFail(User, { email: "foo" });
-  expect(user.name).toBe("Foo");
-  user.name = "Bar";
-  orm.em.remove(user);
-  await orm.em.flush();
+  const student = await orm.em.findOneOrFail(Student, { info: null });
+  expect(student.name).toBe("Foo");
 
-  const count = await orm.em.count(User, { email: "foo" });
-  expect(count).toBe(0);
+  const courseWithSomeStudentNoInfo = await orm.em.find(Course, {
+    students: { $some: { info: null } },
+  });
+  expect(courseWithSomeStudentNoInfo.length).toBe(1);
 });
