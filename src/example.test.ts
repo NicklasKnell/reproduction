@@ -1,11 +1,9 @@
 import {
-  Collection,
   Embeddable,
   Embedded,
   Entity,
-  ManyToOne,
   MikroORM,
-  OneToMany,
+  OneToOne,
   PrimaryKey,
   Property,
 } from "@mikro-orm/postgresql";
@@ -26,15 +24,15 @@ class StudentInfo {
 }
 
 @Entity()
-class Course {
+class Student {
   @PrimaryKey()
   id: number;
 
   @Property()
   name: string;
 
-  @OneToMany({ mappedBy: "course" })
-  students = new Collection<Student>(this);
+  @Embedded({ object: true, nullable: true })
+  info: StudentInfo | null = null;
 
   constructor(id: number, name: string) {
     this.id = id;
@@ -43,23 +41,16 @@ class Course {
 }
 
 @Entity()
-class Student {
+class StudentExtended {
   @PrimaryKey()
   id: number;
 
-  @Property()
-  name: string;
+  @OneToOne()
+  student: Student;
 
-  @ManyToOne()
-  course: Course;
-
-  @Embedded({ object: true, nullable: true })
-  info: StudentInfo | null = null;
-
-  constructor(id: number, name: string, course: Course) {
+  constructor(id: number, student: Student) {
     this.id = id;
-    this.name = name;
-    this.course = course;
+    this.student = student;
   }
 }
 
@@ -72,7 +63,7 @@ beforeAll(async () => {
     port: 5432,
     user: "admin",
     password: "admin",
-    entities: [StudentInfo, Student, Course],
+    entities: [StudentExtended, StudentInfo, Student],
     metadataProvider: TsMorphMetadataProvider,
     debug: ["query", "query-params"],
     allowGlobalContext: true, // only for testing
@@ -85,20 +76,28 @@ afterAll(async () => {
 });
 
 test("basic CRUD example", async () => {
-  const course1 = new Course(1, "Math");
-  const newStudent1 = new Student(1, "Foo", course1);
-  const newStudent2 = new Student(2, "Bar", course1);
+  const newStudent1 = new Student(1, "Foo");
+  const newStudent2 = new Student(2, "Bar");
+  const newStudentExtended1 = new StudentExtended(1, newStudent1);
+  const newStudentExtended2 = new StudentExtended(2, newStudent2);
   newStudent2.info = new StudentInfo("John", "Doe");
-  orm.em.persist(newStudent1);
-  orm.em.persist(newStudent2);
+  orm.em.persist([
+    newStudent1,
+    newStudent2,
+    newStudentExtended1,
+    newStudentExtended2,
+  ]);
   await orm.em.flush();
   orm.em.clear();
 
-  const student = await orm.em.findOneOrFail(Student, { info: null });
-  expect(student.name).toBe("Foo");
+  const student = await orm.em.findOneOrFail(
+    StudentExtended,
+    {
+      student: { info: null },
+    },
+    // Without this populate, the query is correct.
+    { populate: ["student"] }
+  );
 
-  const courseWithSomeStudentNoInfo = await orm.em.find(Course, {
-    students: { $some: { info: null } },
-  });
-  expect(courseWithSomeStudentNoInfo.length).toBe(1);
+  expect(student.student).toBeDefined();
 });
