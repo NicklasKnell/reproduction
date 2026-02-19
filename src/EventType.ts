@@ -1,15 +1,11 @@
-import { Platform, Type } from '@mikro-orm/postgresql';
+import { JsonType, Platform, Type } from '@mikro-orm/postgresql';
 import { MyEvent } from './types/MyEvent';
 import { CalendarDate } from 'calendar-date';
 
-export class EventType extends Type<MyEvent | null, string | null> {
-  private readonly length?: number;
-
-  constructor(length?: number) {
+export class EventType extends JsonType {
+  constructor() {
     super();
-    this.length = length;
   }
-
 
   convertToDatabaseValue(value: MyEvent | null): string | null {
     if (!value) {
@@ -19,7 +15,7 @@ export class EventType extends Type<MyEvent | null, string | null> {
     return JSON.stringify(value);
   }
 
-  convertToJSValue(value: string | MyEvent | null, platform: Platform): MyEvent | null {
+  convertToJSValue(value: MyEvent | null, platform: Platform): MyEvent | null {
     if (value == null) {
       return value as null;
     }
@@ -30,6 +26,7 @@ export class EventType extends Type<MyEvent | null, string | null> {
 
     let parsedValue: MyEvent;
     if (typeof value === 'string') {
+      console.log('Parsing JSON string:', value);
       parsedValue = JSON.parse(value);
     } else {
       parsedValue = value;
