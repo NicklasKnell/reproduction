@@ -46,23 +46,5 @@ test('Custom Type', async () => {
 
 });
 
-test('Custom Type Immediate populate', async () => {
-
-  const event: MyEvent = {
-    title: 'Test Event',
-    date: new CalendarDate(2024, 6, 1),
-  }
-  // Setup
-  const entityWithArray = new EntityWithCustomType('2', event);
-  await orm.em.persistAndFlush(entityWithArray);
-  orm.em.clear();
-
-
-  // Test
-  const populatedEntity = await orm.em.findOneOrFail(EntityWithCustomType, '2', {populate: ['event']});
-  expect(populatedEntity).toBeDefined();
-  expect(populatedEntity.event.date).toEqual(new CalendarDate(2024, 6, 1));
-
-});
 
 

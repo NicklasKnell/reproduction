@@ -2,44 +2,33 @@ import { JsonType, Platform, Type } from '@mikro-orm/postgresql';
 import { MyEvent } from './types/MyEvent';
 import { CalendarDate } from 'calendar-date';
 
+type MyEventRaw = Omit<MyEvent, 'date'> & { date: string };
+
 export class EventType extends JsonType {
   constructor() {
     super();
   }
 
-  convertToDatabaseValue(value: MyEvent | null): string | null {
-    if (!value) {
-      return value as null;
-    }
-
+  convertToDatabaseValue(value: MyEvent): string {
     return JSON.stringify(value);
   }
 
-  convertToJSValue(value: MyEvent | null, platform: Platform): MyEvent | null {
-    if (value == null) {
-      return value as null;
-    }
+  convertToJSValue(rawValue: MyEventRaw, platform: Platform): MyEvent {
+    const value = super.convertToJSValue(rawValue, platform) as MyEventRaw; // Am i supposed to call that? Doesn't seem to make a difference
 
-    if(platform.convertsJsonAutomatically()) {
-      console.log(value, typeof value);
-    }
-
-    let parsedValue: MyEvent;
     if (typeof value === 'string') {
-      console.log('Parsing JSON string:', value);
-      parsedValue = JSON.parse(value);
-    } else {
-      parsedValue = value;
+      console.warn("Manually parsing value because it is still a string.");
+      const parsedValue = JSON.parse(value) as MyEventRaw;
+      return  {
+        title: parsedValue.title,
+        date: CalendarDate.parse(parsedValue.date.toString()),
+      };
     }
 
     return {
-      title: parsedValue.title,
-      date: CalendarDate.parse(parsedValue.date.toString()),
+      title: value.title,
+      date: CalendarDate.parse(value.date.toString()),
     };
-  }
-
-  getColumnType(): string {
-    return 'jsonb';
   }
 }
 
