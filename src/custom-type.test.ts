@@ -1,8 +1,49 @@
-import { MikroORM } from '@mikro-orm/postgresql';
+import { Entity, JsonType, MikroORM, Platform, PrimaryKey, Property } from '@mikro-orm/postgresql';
 import { TsMorphMetadataProvider } from '@mikro-orm/reflection';
-import { EntityWithCustomType } from './entities/EntityWithCustomType';
 import { CalendarDate } from 'calendar-date';
-import { MyEvent } from './types/MyEvent';
+
+interface MyEvent {
+  title: string;
+  date: CalendarDate;
+}
+
+type MyEventRaw = Omit<MyEvent, 'date'> & { date: string };
+
+class EventType extends JsonType {
+  constructor() {
+    super();
+  }
+
+  convertToJSValue(rawValue: MyEventRaw, platform: Platform): MyEvent {
+    // Am i supposed to call that? Doesn't seem to make a difference
+    const value = super.convertToJSValue(rawValue, platform) as MyEventRaw;
+
+    if (typeof value === 'string') {
+      throw new Error('Invalid value for MyEvent');
+    }
+
+    return {
+      title: value.title,
+      date: CalendarDate.parse(value.date.toString()),
+    };
+  }
+}
+
+@Entity()
+export class EntityWithCustomType {
+  @PrimaryKey({ type: 'string'})
+  id: string;
+
+  @Property({ type: new EventType() })
+  event: MyEvent;
+
+  constructor(id: string, event: MyEvent) {
+    this.id = id;
+    this.event = event;
+  }
+}
+
+
 
 let orm: MikroORM;
 
@@ -32,7 +73,8 @@ test('Custom Type', async () => {
   }
   // Setup
   const entityWithArray = new EntityWithCustomType('1', event);
-  await orm.em.persistAndFlush(entityWithArray);
+  orm.em.persist(entityWithArray);
+  await orm.em.flush();
   orm.em.clear();
 
 
